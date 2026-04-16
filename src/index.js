@@ -6,11 +6,8 @@ const profileController = require('./controllers/profileController');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Connect to MongoDB (no env check)
-connectDB().catch(err => {
-    console.error('Failed to connect to database:', err.message);
-    process.exit(1);
-});
+// Connect to MongoDB
+connectDB();
 
 // Middleware
 app.use(cors({ origin: '*' }));
@@ -59,7 +56,7 @@ app.use((req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
     console.error('Error:', err);
-    res.status(500).json({ status: 'error', message: err.message || 'Internal server error' });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
 });
 
 app.listen(PORT, () => {
