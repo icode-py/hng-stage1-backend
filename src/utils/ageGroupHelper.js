@@ -6,4 +6,14 @@ const getAgeGroup = (age) => {
     return null;
 };
 
-module.exports = { getAgeGroup };
+const getAgeRange = (ageGroup) => {
+    const ranges = {
+        'child': { min: 0, max: 12 },
+        'teenager': { min: 13, max: 19 },
+        'adult': { min: 20, max: 59 },
+        'senior': { min: 60, max: 150 }
+    };
+    return ranges[ageGroup] || null;
+};
+
+module.exports = { getAgeGroup, getAgeRange };
