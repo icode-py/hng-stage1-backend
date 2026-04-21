@@ -2,7 +2,8 @@ const Profile = require('../models/Profile');
 const { getGenderData } = require('./genderizeService');
 const { getAgeData } = require('./agifyService');
 const { getNationalityData } = require('./nationalizeService');
-const { getAgeGroup } = require('../utils/ageGroupHelper');
+const { getCountryName } = require('./countryService');
+const { getAgeGroup } = require('../utils/ageGroup');
 
 const createProfile = async (name) => {
     const normalizedName = name.trim().toLowerCase();
@@ -27,15 +28,18 @@ const createProfile = async (name) => {
         // Calculate age group
         const age_group = getAgeGroup(ageData.age);
 
+        // Get country name
+        const country_name = getCountryName(nationalityData.country_id);
+
         // Create new profile
         const profile = await Profile.create({
             name: normalizedName,
             gender: genderData.gender,
             gender_probability: genderData.gender_probability,
-            sample_size: genderData.sample_size,
             age: ageData.age,
             age_group,
             country_id: nationalityData.country_id,
+            country_name,
             country_probability: nationalityData.country_probability
         });
 
@@ -44,7 +48,6 @@ const createProfile = async (name) => {
             profile
         };
     } catch (error) {
-        // If any API fails, throw error with API name
         if (error.apiName) {
             throw error;
         }
@@ -57,23 +60,73 @@ const getProfileById = async (id) => {
     return profile;
 };
 
-const getAllProfiles = async (filters = {}) => {
+const getAllProfiles = async (filters = {}, options = {}) => {
     const query = {};
 
+    // Basic filters
     if (filters.gender) {
         query.gender = filters.gender.toLowerCase();
-    }
-
-    if (filters.country_id) {
-        query.country_id = filters.country_id.toUpperCase();
     }
 
     if (filters.age_group) {
         query.age_group = filters.age_group.toLowerCase();
     }
 
-    const profiles = await Profile.find(query).select('id name gender age age_group country_id');
-    return profiles;
+    if (filters.country_id) {
+        query.country_id = filters.country_id.toUpperCase();
+    }
+
+    // Age range filters
+    if (filters.min_age !== undefined || filters.max_age !== undefined) {
+        query.age = {};
+        if (filters.min_age !== undefined) {
+            query.age.$gte = parseInt(filters.min_age);
+        }
+        if (filters.max_age !== undefined) {
+            query.age.$lte = parseInt(filters.max_age);
+        }
+    }
+
+    // Probability filters
+    if (filters.min_gender_probability !== undefined) {
+        query.gender_probability = { $gte: parseFloat(filters.min_gender_probability) };
+    }
+
+    if (filters.min_country_probability !== undefined) {
+        query.country_probability = { $gte: parseFloat(filters.min_country_probability) };
+    }
+
+    // Build sort object
+    const sortOptions = {};
+    const sortBy = options.sort_by || 'created_at';
+    const order = options.order === 'asc' ? 1 : -1;
+
+    const validSortFields = ['age', 'created_at', 'gender_probability'];
+    if (validSortFields.includes(sortBy)) {
+        sortOptions[sortBy] = order;
+    }
+
+    // Pagination
+    const page = parseInt(options.page) || 1;
+    const limit = Math.min(parseInt(options.limit) || 10, 50);
+    const skip = (page - 1) * limit;
+
+    // Execute query with pagination
+    const [profiles, total] = await Promise.all([
+        Profile.find(query)
+            .sort(sortOptions)
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        Profile.countDocuments(query)
+    ]);
+
+    return {
+        profiles,
+        total,
+        page,
+        limit
+    };
 };
 
 const deleteProfile = async (id) => {
