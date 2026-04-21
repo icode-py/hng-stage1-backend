@@ -21,10 +21,6 @@ const profileSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    sample_size: {
-        type: Number,
-        required: true
-    },
     age: {
         type: Number,
         required: true
@@ -35,6 +31,11 @@ const profileSchema = new mongoose.Schema({
         required: true
     },
     country_id: {
+        type: String,
+        required: true,
+        uppercase: true
+    },
+    country_name: {
         type: String,
         required: true
     },
@@ -50,6 +51,15 @@ const profileSchema = new mongoose.Schema({
     timestamps: false,
     versionKey: false
 });
+
+// Indexes for performance
+profileSchema.index({ gender: 1 });
+profileSchema.index({ age_group: 1 });
+profileSchema.index({ country_id: 1 });
+profileSchema.index({ age: 1 });
+profileSchema.index({ gender_probability: 1 });
+profileSchema.index({ country_probability: 1 });
+profileSchema.index({ created_at: 1 });
 
 // Convert _id to id in JSON responses
 profileSchema.set('toJSON', {
