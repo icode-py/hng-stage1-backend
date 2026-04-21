@@ -26,6 +26,10 @@ app.get('/api/profiles/:id', (req, res, next) => {
     profileController.getProfile(req, res).catch(next);
 });
 
+app.get('/api/profiles/search', (req, res, next) => {
+    profileController.searchProfiles(req, res).catch(next);
+});
+
 app.delete('/api/profiles/:id', (req, res, next) => {
     profileController.deleteProfile(req, res).catch(next);
 });
