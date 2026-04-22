@@ -67,7 +67,7 @@ text
 
 ### 4. Create Profile
 **POST** `/api/profiles`
-```json
+
 { "name": "john" }
 
 ### 5. Delete Profile
