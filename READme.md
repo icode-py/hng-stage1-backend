@@ -73,7 +73,7 @@ text
 ### 5. Delete Profile
 DELETE /api/profiles/{id}
 
-Natural Language Parsing Approach
+### Natural Language Parsing Approach
 Supported Keywords and Mappings
 Gender Keywords:
 
@@ -81,7 +81,7 @@ Male: male, males, man, men, boy, boys
 
 Female: female, females, woman, women, girl, girls
 
-Age Group Keywords:
+### Age Group Keywords:
 
 Keyword	Age Range
 child	0-12
@@ -90,7 +90,7 @@ adult	20-59
 senior	60+
 Special Keywords:
 
-Keyword	Mapping
+### Keyword	Mapping
 young	min_age=16, max_age=24
 Age Patterns:
 
@@ -100,7 +100,9 @@ Age Patterns:
 
 "age X" / "X years old" → exact age match
 
-Country Patterns:
+
+
+### Country Patterns:
 
 "from X" where X is country name
 
@@ -108,7 +110,9 @@ Direct country names (e.g., "nigeria", "france")
 
 Country aliases (e.g., "usa" → US, "uk" → GB)
 
-Parsing Logic
+
+
+### Parsing Logic
 The parser uses a rule-based approach with the following steps:
 
 Tokenization: Converts query to lowercase for case-insensitive matching
@@ -121,7 +125,9 @@ Filter Construction: Builds MongoDB query filters from matched patterns
 
 Conflict Resolution: Later matches override earlier ones for same filter type
 
-Example Query Translations
+
+
+### Example Query Translations
 Query	Filters Applied
 "young males"	gender=male, min_age=16, max_age=24
 "females above 30"	gender=female, min_age=30
@@ -130,7 +136,9 @@ Query	Filters Applied
 "male and female teenagers above 17"	age_group=teenager, min_age=17
 "young women from brazil"	gender=female, min_age=16, max_age=24, country_id=BR
 
-Limitations
+
+
+### Limitations
 What the parser does NOT handle:
 
 Complex Boolean Logic: No support for OR conditions (e.g., "males OR females")
@@ -161,7 +169,9 @@ Extremely long queries (>500 characters)
 
 
 
-Response Format
+
+
+### Response Format
 Success Response
 json
 {
@@ -179,7 +189,9 @@ json
 }
 
 
-Tech Stack
+
+
+### Tech Stack
 Node.js / Express
 
 MongoDB / Mongoose
@@ -188,7 +200,9 @@ UUID v7
 
 Axios
 
-Local Setup
+
+
+### Local Setup
 bash
 npm install
 npm run seed  # Seed database with 2026 profiles
@@ -196,11 +210,12 @@ npm run dev
 Performance Optimizations
 Database indexes on all filterable fields (gender, age_group, country_id, age, probabilities)
 
-Pagination limits (max 50 per page) to prevent memory issues
 
-Lean queries for reduced memory footprint
 
-Query optimization through proper MongoDB query construction
+### Pagination limits (max 50 per page) to prevent memory issues
 
-Author
-Okereke Chima Emmanuel
+### Lean queries for reduced memory footprint
+
+### Query optimization through proper MongoDB query construction
+
+### Author Okereke Chima Emmanuel
