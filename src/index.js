@@ -22,12 +22,12 @@ app.get('/api/profiles', (req, res, next) => {
     profileController.getAllProfiles(req, res).catch(next);
 });
 
-app.get('/api/profiles/:id', (req, res, next) => {
-    profileController.getProfile(req, res).catch(next);
-});
-
 app.get('/api/profiles/search', (req, res, next) => {
     profileController.searchProfiles(req, res).catch(next);
+});
+
+app.get('/api/profiles/:id', (req, res, next) => {
+    profileController.getProfile(req, res).catch(next);
 });
 
 app.delete('/api/profiles/:id', (req, res, next) => {
@@ -42,10 +42,11 @@ app.get('/health', (req, res) => {
 // Root
 app.get('/', (req, res) => {
     res.json({
-        message: 'HNG Stage 1 Backend API',
+        message: 'HNG Stage 2 Backend API',
         endpoints: {
             createProfile: 'POST /api/profiles',
             getAllProfiles: 'GET /api/profiles',
+            searchProfiles: 'GET /api/profiles/search',
             getProfile: 'GET /api/profiles/:id',
             deleteProfile: 'DELETE /api/profiles/:id'
         }

@@ -3,9 +3,8 @@ const mongoose = require('mongoose');
 const fs = require('fs').promises;
 const path = require('path');
 const Profile = require('../models/Profile');
-const { getCountryName } = require('../services/countryService');
 const { generateUUIDv7 } = require('../utils/uuid');
-const { getAgeGroup } = require('../utils/ageGroup');
+const { getAgeGroup } = require('../utils/ageGroupHelper');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://stinoemmanuel6_db_user:zTDBtf1TFgdsFoAZ@stage1cluster.be6shg7.mongodb.net/hng-stage1?retryWrites=true&w=majority';
 
@@ -17,8 +16,13 @@ const seedDatabase = async () => {
 
         // Read the JSON file
         const filePath = path.join(__dirname, '../../data/profiles_2026.json');
+        console.log('Reading file from:', filePath);
+
         const data = await fs.readFile(filePath, 'utf8');
-        const profiles = JSON.parse(data);
+        const parsed = JSON.parse(data);
+
+        // Handle both formats: direct array or { profiles: [...] }
+        const profiles = Array.isArray(parsed) ? parsed : parsed.profiles;
 
         console.log(`Found ${profiles.length} profiles in JSON file`);
 
@@ -28,31 +32,27 @@ const seedDatabase = async () => {
         for (const profileData of profiles) {
             try {
                 // Check if profile already exists
-                const existingProfile = await Profile.findOne({
-                    name: profileData.name.toLowerCase().trim()
-                });
+                const normalizedName = profileData.name.toLowerCase().trim();
+                const existingProfile = await Profile.findOne({ name: normalizedName });
 
                 if (existingProfile) {
                     skipped++;
                     continue;
                 }
 
-                // Calculate age group
-                const age_group = getAgeGroup(profileData.age);
-
-                // Get country name
-                const country_name = getCountryName(profileData.country_id);
+                // Calculate age group (in case it's missing or to verify)
+                const age_group = profileData.age_group || getAgeGroup(profileData.age);
 
                 // Create new profile with UUID v7
                 const profile = new Profile({
                     _id: generateUUIDv7(),
-                    name: profileData.name.toLowerCase().trim(),
+                    name: normalizedName,
                     gender: profileData.gender,
                     gender_probability: profileData.gender_probability,
                     age: profileData.age,
                     age_group: age_group,
                     country_id: profileData.country_id.toUpperCase(),
-                    country_name: country_name,
+                    country_name: profileData.country_name,
                     country_probability: profileData.country_probability,
                     created_at: new Date()
                 });

@@ -51,27 +51,25 @@ class NaturalLanguageParser {
 
         const query = queryString.toLowerCase().trim();
         const filters = {};
-
-        // Parse age-related terms
-        this.parseAgeTerms(query, filters);
+        let foundMatch = false;
 
         // Parse gender
-        this.parseGender(query, filters);
+        if (this.parseGender(query, filters)) foundMatch = true;
 
         // Parse age groups
-        this.parseAgeGroups(query, filters);
+        if (this.parseAgeGroups(query, filters)) foundMatch = true;
 
         // Parse countries
-        this.parseCountries(query, filters);
+        if (this.parseCountries(query, filters)) foundMatch = true;
 
         // Parse "above X" patterns
-        this.parseAbovePattern(query, filters);
+        if (this.parseAbovePattern(query, filters)) foundMatch = true;
 
         // Parse "below/under X" patterns
-        this.parseBelowPattern(query, filters);
+        if (this.parseBelowPattern(query, filters)) foundMatch = true;
 
-        // Check if we found any filters
-        if (Object.keys(filters).length === 0) {
+        // If no matches found at all, return null
+        if (!foundMatch) {
             return null;
         }
 
@@ -79,9 +77,12 @@ class NaturalLanguageParser {
     }
 
     parseAgeTerms(query, filters) {
+        let found = false;
+
         // Handle "young"
         if (query.includes('young')) {
             Object.assign(filters, this.specialMappings.young);
+            found = true;
         }
 
         // Handle specific ages (e.g., "age 25", "25 years old")
@@ -91,17 +92,22 @@ class NaturalLanguageParser {
             const age = parseInt(match[1]);
             if (!isNaN(age) && age >= 0 && age <= 150) {
                 filters.age = age;
+                found = true;
             }
         }
+
+        return found;
     }
 
     parseGender(query, filters) {
         for (const [keyword, gender] of Object.entries(this.genderKeywords)) {
             if (query.includes(keyword)) {
                 filters.gender = gender;
-                break;
+                return true;
             }
         }
+
+        return false;
     }
 
     parseAgeGroups(query, filters) {
@@ -113,9 +119,10 @@ class NaturalLanguageParser {
                     filters.min_age = range.min;
                     filters.max_age = range.max;
                 }
-                break;
+                return true;
             }
         }
+        return false;
     }
 
     parseCountries(query, filters) {
@@ -123,7 +130,7 @@ class NaturalLanguageParser {
         for (const [alias, code] of Object.entries(this.countryAliases)) {
             if (query.includes(alias)) {
                 filters.country_id = code;
-                return;
+                return true;
             }
         }
 
@@ -131,7 +138,7 @@ class NaturalLanguageParser {
         for (const [code, name] of Object.entries(this.countries)) {
             if (query.includes(name.toLowerCase())) {
                 filters.country_id = code;
-                return;
+                return true;
             }
         }
 
@@ -143,10 +150,12 @@ class NaturalLanguageParser {
             for (const [code, name] of Object.entries(this.countries)) {
                 if (name.toLowerCase() === countryName) {
                     filters.country_id = code;
-                    break;
+                    return true;
                 }
             }
         }
+
+        return false;
     }
 
     parseAbovePattern(query, filters) {
@@ -156,8 +165,10 @@ class NaturalLanguageParser {
             const age = parseInt(match[1]);
             if (!isNaN(age)) {
                 filters.min_age = age;
+                return true;
             }
         }
+        return false;
     }
 
     parseBelowPattern(query, filters) {
@@ -167,8 +178,10 @@ class NaturalLanguageParser {
             const age = parseInt(match[1]);
             if (!isNaN(age)) {
                 filters.max_age = age;
+                return true;
             }
         }
+        return false;
     }
 }
 

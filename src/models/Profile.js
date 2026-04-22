@@ -49,7 +49,23 @@ const profileSchema = new mongoose.Schema({
     }
 }, {
     timestamps: false,
-    versionKey: false
+    versionKey: false,
+    toJSON: {
+        transform: (doc, ret) => {
+            ret.id = ret._id;
+            delete ret._id;
+            delete ret.__v;
+            return ret;
+        }
+    },
+    toObject: {
+        transform: (doc, ret) => {
+            ret.id = ret._id;
+            delete ret._id;
+            delete ret.__v;
+            return ret;
+        }
+    }
 });
 
 // Indexes for performance
@@ -61,14 +77,5 @@ profileSchema.index({ gender_probability: 1 });
 profileSchema.index({ country_probability: 1 });
 profileSchema.index({ created_at: 1 });
 
-// Convert _id to id in JSON responses
-profileSchema.set('toJSON', {
-    transform: (doc, ret) => {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret.__v;
-        return ret;
-    }
-});
 
 module.exports = mongoose.model('Profile', profileSchema);

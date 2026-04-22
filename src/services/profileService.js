@@ -3,7 +3,7 @@ const { getGenderData } = require('./genderizeService');
 const { getAgeData } = require('./agifyService');
 const { getNationalityData } = require('./nationalizeService');
 const { getCountryName } = require('./countryService');
-const { getAgeGroup } = require('../utils/ageGroup');
+const { getAgeGroup } = require('../utils/ageGroupHelper');
 
 const createProfile = async (name) => {
     const normalizedName = name.trim().toLowerCase();
@@ -121,8 +121,17 @@ const getAllProfiles = async (filters = {}, options = {}) => {
         Profile.countDocuments(query)
     ]);
 
+    // Transform _id to id
+    const transformedProfiles = profiles.map(profile => {
+        const { _id, __v, ...rest } = profile;
+        return {
+            id: _id,
+            ...rest
+        };
+    });
+
     return {
-        profiles,
+        profiles: transformedProfiles,
         total,
         page,
         limit
