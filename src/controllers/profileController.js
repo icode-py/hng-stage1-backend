@@ -130,12 +130,13 @@ const getAllProfiles = async (req, res) => {
         const options = {
             sort_by,
             order,
-            page,
-            limit
+            page: parseInt(page) || 1,
+            limit: parseInt(limit) || 10
         };
 
         const result = await profileService.getAllProfiles(filters, options);
 
+        // ENSURE EXACT FORMAT
         return res.status(200).json({
             status: 'success',
             page: result.page,

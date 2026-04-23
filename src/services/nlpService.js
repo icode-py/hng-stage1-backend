@@ -15,7 +15,7 @@ class NaturalLanguageParser {
             'young': { min_age: 16, max_age: 24 }
         };
 
-        // Gender keywords
+        // Gender keywords - EXPANDED
         this.genderKeywords = {
             'male': 'male',
             'males': 'male',
@@ -32,7 +32,7 @@ class NaturalLanguageParser {
         };
 
         // Country mappings
-        this.countries = getAllCountries();
+        this.countries = require('./countryService').getAllCountries();
         this.countryAliases = {
             'usa': 'US',
             'america': 'US',
@@ -40,7 +40,8 @@ class NaturalLanguageParser {
             'britain': 'GB',
             'england': 'GB',
             'uae': 'AE',
-            'emirates': 'AE'
+            'emirates': 'AE',
+            'nigeria': 'NG'
         };
     }
 
@@ -52,6 +53,9 @@ class NaturalLanguageParser {
         const query = queryString.toLowerCase().trim();
         const filters = {};
         let foundMatch = false;
+
+        // Parse age-related terms
+        if (this.parseAgeTerms(query, filters)) foundMatch = true;
 
         // Parse gender
         if (this.parseGender(query, filters)) foundMatch = true;
@@ -68,7 +72,13 @@ class NaturalLanguageParser {
         // Parse "below/under X" patterns
         if (this.parseBelowPattern(query, filters)) foundMatch = true;
 
-        // If no matches found at all, return null
+        // Handle combined gender queries like "male and female"
+        if (query.includes('male and female') || query.includes('female and male')) {
+            // Remove gender filter since it could be either
+            delete filters.gender;
+            foundMatch = true;
+        }
+
         if (!foundMatch) {
             return null;
         }
@@ -81,11 +91,12 @@ class NaturalLanguageParser {
 
         // Handle "young"
         if (query.includes('young')) {
-            Object.assign(filters, this.specialMappings.young);
+            filters.min_age = 16;
+            filters.max_age = 24;
             found = true;
         }
 
-        // Handle specific ages (e.g., "age 25", "25 years old")
+        // Handle specific ages
         const agePattern = /(?:age\s+)?(\d+)(?:\s*(?:years?\s*old|y\/o|yo))?/g;
         let match;
         while ((match = agePattern.exec(query)) !== null) {
@@ -100,13 +111,17 @@ class NaturalLanguageParser {
     }
 
     parseGender(query, filters) {
+        // Check for "male and female" pattern - don't set gender filter
+        if (query.includes('male and female') || query.includes('female and male')) {
+            return true; // Found match but don't filter
+        }
+
         for (const [keyword, gender] of Object.entries(this.genderKeywords)) {
             if (query.includes(keyword)) {
                 filters.gender = gender;
                 return true;
             }
         }
-
         return false;
     }
 
@@ -114,7 +129,6 @@ class NaturalLanguageParser {
         for (const [group, range] of Object.entries(this.ageGroups)) {
             if (query.includes(group)) {
                 filters.age_group = group;
-                // If no specific age filters set, use the group's range
                 if (!filters.min_age && !filters.max_age && !filters.age) {
                     filters.min_age = range.min;
                     filters.max_age = range.max;
@@ -126,7 +140,27 @@ class NaturalLanguageParser {
     }
 
     parseCountries(query, filters) {
-        // Check country aliases first
+        // Check "people from X" pattern first
+        const peoplePattern = /people\s+from\s+([a-z\s]+?)(?:\s|$)/;
+        const peopleMatch = query.match(peoplePattern);
+        if (peopleMatch) {
+            const countryName = peopleMatch[1].trim();
+            for (const [code, name] of Object.entries(this.countries)) {
+                if (name.toLowerCase() === countryName) {
+                    filters.country_id = code;
+                    return true;
+                }
+            }
+            // Check aliases
+            for (const [alias, code] of Object.entries(this.countryAliases)) {
+                if (countryName === alias) {
+                    filters.country_id = code;
+                    return true;
+                }
+            }
+        }
+
+        // Check country aliases
         for (const [alias, code] of Object.entries(this.countryAliases)) {
             if (query.includes(alias)) {
                 filters.country_id = code;
@@ -149,6 +183,13 @@ class NaturalLanguageParser {
             const countryName = fromMatch[1].trim();
             for (const [code, name] of Object.entries(this.countries)) {
                 if (name.toLowerCase() === countryName) {
+                    filters.country_id = code;
+                    return true;
+                }
+            }
+            // Check aliases
+            for (const [alias, code] of Object.entries(this.countryAliases)) {
+                if (countryName === alias) {
                     filters.country_id = code;
                     return true;
                 }
