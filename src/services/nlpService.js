@@ -2,7 +2,6 @@ const { getAllCountries } = require('./countryService');
 
 class NaturalLanguageParser {
     constructor() {
-        // Age group mappings
         this.ageGroups = {
             'child': { min: 0, max: 12 },
             'teenager': { min: 13, max: 19 },
@@ -10,12 +9,10 @@ class NaturalLanguageParser {
             'senior': { min: 60, max: 150 }
         };
 
-        // Special keywords
         this.specialMappings = {
             'young': { min_age: 16, max_age: 24 }
         };
 
-        // Gender keywords - EXPANDED
         this.genderKeywords = {
             'male': 'male',
             'males': 'male',
@@ -31,8 +28,7 @@ class NaturalLanguageParser {
             'girls': 'female'
         };
 
-        // Country mappings
-        this.countries = require('./countryService').getAllCountries();
+        this.countries = getAllCountries();
         this.countryAliases = {
             'usa': 'US',
             'america': 'US',
@@ -54,7 +50,13 @@ class NaturalLanguageParser {
         const filters = {};
         let foundMatch = false;
 
-        // Parse age-related terms
+        // Parse "above X" patterns FIRST
+        if (this.parseAbovePattern(query, filters)) foundMatch = true;
+
+        // Parse "below/under X" patterns
+        if (this.parseBelowPattern(query, filters)) foundMatch = true;
+
+        // Parse age-related terms (young only)
         if (this.parseAgeTerms(query, filters)) foundMatch = true;
 
         // Parse gender
@@ -66,15 +68,8 @@ class NaturalLanguageParser {
         // Parse countries
         if (this.parseCountries(query, filters)) foundMatch = true;
 
-        // Parse "above X" patterns
-        if (this.parseAbovePattern(query, filters)) foundMatch = true;
-
-        // Parse "below/under X" patterns
-        if (this.parseBelowPattern(query, filters)) foundMatch = true;
-
-        // Handle combined gender queries like "male and female"
+        // Handle combined gender queries
         if (query.includes('male and female') || query.includes('female and male')) {
-            // Remove gender filter since it could be either
             delete filters.gender;
             foundMatch = true;
         }
@@ -89,39 +84,39 @@ class NaturalLanguageParser {
     parseAgeTerms(query, filters) {
         let found = false;
 
-        // Handle "young"
-        if (query.includes('young')) {
+        // Only handle "young" - do NOT parse exact ages
+        if (/\byoung\b/.test(query)) {
             filters.min_age = 16;
             filters.max_age = 24;
             found = true;
-        }
-
-        // Handle specific ages
-        const agePattern = /(?:age\s+)?(\d+)(?:\s*(?:years?\s*old|y\/o|yo))?/g;
-        let match;
-        while ((match = agePattern.exec(query)) !== null) {
-            const age = parseInt(match[1]);
-            if (!isNaN(age) && age >= 0 && age <= 150) {
-                filters.age = age;
-                found = true;
-            }
         }
 
         return found;
     }
 
     parseGender(query, filters) {
-        // Check for "male and female" pattern - don't set gender filter
         if (query.includes('male and female') || query.includes('female and male')) {
-            return true; // Found match but don't filter
+            return true;
         }
 
-        for (const [keyword, gender] of Object.entries(this.genderKeywords)) {
+        // Check female words first (they contain "male" substring)
+        const femaleWords = ['female', 'females', 'woman', 'women', 'girl', 'girls'];
+        for (const keyword of femaleWords) {
             if (query.includes(keyword)) {
-                filters.gender = gender;
+                filters.gender = 'female';
                 return true;
             }
         }
+
+        // Check male words
+        const maleWords = ['male', 'males', 'man', 'men', 'boy', 'boys'];
+        for (const keyword of maleWords) {
+            if (query.includes(keyword)) {
+                filters.gender = 'male';
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -151,7 +146,6 @@ class NaturalLanguageParser {
                     return true;
                 }
             }
-            // Check aliases
             for (const [alias, code] of Object.entries(this.countryAliases)) {
                 if (countryName === alias) {
                     filters.country_id = code;
@@ -187,7 +181,6 @@ class NaturalLanguageParser {
                     return true;
                 }
             }
-            // Check aliases
             for (const [alias, code] of Object.entries(this.countryAliases)) {
                 if (countryName === alias) {
                     filters.country_id = code;
@@ -200,12 +193,25 @@ class NaturalLanguageParser {
     }
 
     parseAbovePattern(query, filters) {
-        const abovePattern = /(?:above|over|older\s+than|>\s*)(\d+)/;
-        const match = query.match(abovePattern);
-        if (match) {
-            const age = parseInt(match[1]);
-            if (!isNaN(age)) {
-                filters.min_age = age;
+        // look for "above X", "over X", "older than X"
+        if (query.includes('above')) {
+            const match = query.match(/above\s+(\d+)/);
+            if (match) {
+                filters.min_age = parseInt(match[1]);
+                return true;
+            }
+        }
+        if (query.includes('over')) {
+            const match = query.match(/over\s+(\d+)/);
+            if (match) {
+                filters.min_age = parseInt(match[1]);
+                return true;
+            }
+        }
+        if (query.includes('older than')) {
+            const match = query.match(/older\s+than\s+(\d+)/);
+            if (match) {
+                filters.min_age = parseInt(match[1]);
                 return true;
             }
         }
@@ -213,17 +219,30 @@ class NaturalLanguageParser {
     }
 
     parseBelowPattern(query, filters) {
-        const belowPattern = /(?:below|under|younger\s+than|<\s*)(\d+)/;
-        const match = query.match(belowPattern);
-        if (match) {
-            const age = parseInt(match[1]);
-            if (!isNaN(age)) {
-                filters.max_age = age;
+        if (query.includes('below')) {
+            const match = query.match(/below\s+(\d+)/);
+            if (match) {
+                filters.max_age = parseInt(match[1]);
+                return true;
+            }
+        }
+        if (query.includes('under')) {
+            const match = query.match(/under\s+(\d+)/);
+            if (match) {
+                filters.max_age = parseInt(match[1]);
+                return true;
+            }
+        }
+        if (query.includes('younger than')) {
+            const match = query.match(/younger\s+than\s+(\d+)/);
+            if (match) {
+                filters.max_age = parseInt(match[1]);
                 return true;
             }
         }
         return false;
     }
+
 }
 
 module.exports = new NaturalLanguageParser();

@@ -167,6 +167,10 @@ const searchProfiles = async (req, res) => {
 
         const filters = nlpService.parseQuery(q);
 
+        // DEBUG: Log the parsed filters
+        console.log('Query:', q);
+        console.log('Parsed filters:', JSON.stringify(filters));
+
         if (!filters) {
             return res.status(400).json({
                 status: 'error',
